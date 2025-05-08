@@ -58,5 +58,5 @@ static void __exit usb_crypto_exit(void)
 module_init(usb_crypto_init);
 module_exit(usb_crypto_exit);
 
-MODULE_AUTHOR("Stephanie Ciprian");
+MODULE_AUTHOR("Stephanie Ciprian and Deep Shah");
 MODULE_DESCRIPTION("A USB driver that encrypts and decrypts data in C")
