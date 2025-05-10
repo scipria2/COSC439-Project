@@ -109,12 +109,6 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
 
         usb_set_intfdata(interface, dev);
 
-        // TODO: Hook into URB submissions for bulk IN and OUT endpoints
-        // This may require intercepting URB submission functions or implementing a filter driver
-
-        // Example: Submit initial URBs for bulk IN and OUT endpoints with custom completion handlers
-        // Note: This is a simplified example and may need adjustment for real use
-
         if (dev->bulk_in_endpointAddr) {
             struct urb *urb_in = usb_alloc_urb(0, GFP_KERNEL);
             if (urb_in) {
