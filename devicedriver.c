@@ -11,6 +11,9 @@
 #define USB_SC_SCSI 0x06
 #define USB_PR_BULK 0x50
 
+//hardcoded public key
+#define PUBLIC_KEY "-----BEGIN PUBLIC KEY-----MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC+NWmIK/0w6mfEeAfduFa32lw8gN133cfFoQKQyIgQv/CuODNuYtL1cgDhmj8yC6FcWAtUrhwlpmy+FFKoUwFS1vV7hozD04PU7/K5ayFQAzg8229FmFcTu4V8biH8JF97LZ481RHN+F1W4Oi5mvl5JoYd955enQERLDHqdPugCQIDAQAB-----END PUBLIC KEY-----"
+
 //match table for supported devices
 static struct usb_device_id usb_table[] = 
 {
