@@ -56,7 +56,7 @@ static void usb_crypto_bulk_in_callback(struct urb *urb)
 
 //USB driver struct
 static struct usb_driver usb_crypto_driver ={
-    .name = "USB Crypto Driver",
+    .name = "USB Disk",
     .id_table = usb_table,
     .probe = usb_crypto_probe,
     .disconnect = usb_crypto_disconnect,
