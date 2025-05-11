@@ -57,7 +57,7 @@ static void usb_crypto_bulk_in_callback(struct urb *urb)
 
 //USB driver struct
 static struct usb_driver usb_crypto_driver ={
-    .name = "USB Crypto Driver",
+    .name = "USB Disk",
     .id_table = usb_table,
     .probe = usb_crypto_probe,
     .disconnect = usb_crypto_disconnect,
@@ -78,10 +78,7 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
             printk(KERN_ERR "USB Crypto Driver: Failed to claim interface\n");
             return retval;
         }
-
-        // TODO: Setup URB interception for bulk transfers here
-
-        // Find bulk IN and OUT endpoints
+     
         struct usb_host_interface *iface_desc = interface->cur_altsetting;
         int i;
         struct usb_crypto *dev;
