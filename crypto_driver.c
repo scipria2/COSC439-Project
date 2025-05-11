@@ -1,6 +1,7 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/usb.h>
+#include <linux/crypto.h>
 
 #define VENDOR_ID 0x1234
 #define PRODUCT_ID 0x5678
@@ -11,7 +12,7 @@
 #define USB_SC_SCSI 0x06
 #define USB_PR_BULK 0x50
 
-//hardcoded public key
+//hardcoded public key (NEEDS TO BE LOADED IN .DER FORMAT... WORK IN PROGRESS)
 #define PUBLIC_KEY "-----BEGIN PUBLIC KEY-----MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC+NWmIK/0w6mfEeAfduFa32lw8gN133cfFoQKQyIgQv/CuODNuYtL1cgDhmj8yC6FcWAtUrhwlpmy+FFKoUwFS1vV7hozD04PU7/K5ayFQAzg8229FmFcTu4V8biH8JF97LZ481RHN+F1W4Oi5mvl5JoYd955enQERLDHqdPugCQIDAQAB-----END PUBLIC KEY-----"
 
 //match table for supported devices
@@ -146,6 +147,16 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
 
     printk(KERN_INFO "USB Crypto Driver: Unsupported USB Device detected\n");
     return -ENODEV;
+}
+
+//encryption function (WORK IN PROGRESS)
+static int encrypt()
+{
+    //TODO: encryption function
+    struct crypto_akcipher *tfm;
+    struct akcipher_request *req;
+    struct scatterlist sl;
+
 }
 
 //called when the USB device is removed
