@@ -1,4 +1,4 @@
-obj-m += usb_crypto.o
+obj-m += crypto_driver.o
 
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD  := $(shell pwd)
