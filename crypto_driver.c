@@ -211,26 +211,26 @@ int encrypt(unsigned char *data, size_t data_len, unsigned char *out, size_t *ou
 static int usb_crypto_probe(struct usb_interface *interface, const struct usb_device_id *id)
 {
     struct usb_device *udev = interface_to_usbdev(interface);
+    struct usb_host_interface *iface_desc = interface->cur_altsetting;
+    struct usb_crypto *dev;
+    int i;
 
     printk(KERN_INFO "USB Crypto Driver: USB Device detected (Vendor: %04x, Product: %04x)\n",
             udev->descriptor.idVendor, udev->descriptor.idProduct);
 
-        
-        struct usb_host_interface *iface_desc = interface->cur_altsetting;
-        int i;
-        struct usb_crypto *dev;
+    
+    dev = kzalloc(sizeof(struct usb_crypto), GFP_KERNEL);
+    if (!dev) {
+        printk(KERN_ERR "USB Crypto Driver: Cannot allocate memory for usb_crypto\n");
+        return -ENOMEM;
+    }
 
-        dev = kzalloc(sizeof(struct usb_crypto), GFP_KERNEL);
-        if (!dev) {
-            printk(KERN_ERR "USB Crypto Driver: Cannot allocate memory for usb_crypto\n");
-            return -ENOMEM;
-        }
+    dev->udev = usb_get_dev(interface_to_usbdev(interface));
+    dev->interface = interface;
 
-        dev->udev = usb_get_dev(interface_to_usbdev(interface));
-        dev->interface = interface;
-
-        for (i = 0; i < iface_desc->desc.bNumEndpoints; i++) {
-            struct usb_endpoint_descriptor *endpoint = &iface_desc->endpoint[i].desc;
+    for (i = 0; i < iface_desc->desc.bNumEndpoints; i++) 
+    {
+        struct usb_endpoint_descriptor *endpoint = &iface_desc->endpoint[i].desc;
             if ((endpoint->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) == USB_ENDPOINT_XFER_BULK) {
                 if (endpoint->bEndpointAddress & USB_DIR_IN) {
                     printk(KERN_INFO "USB Crypto Driver: Bulk IN endpoint found: 0x%X\n", endpoint->bEndpointAddress);
@@ -242,13 +242,18 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
             }
         }
 
+        //store device data
         usb_set_intfdata(interface, dev);
 
-        if (dev->bulk_in_endpointAddr) {
+        if (dev->bulk_in_endpointAddr) 
+        {
             struct urb *urb_in = usb_alloc_urb(0, GFP_KERNEL);
-            if (urb_in) {
+            if (urb_in) 
+            {
                 unsigned char *buf_in = kmalloc(512, GFP_KERNEL);
-                if (buf_in) {
+
+                if (buf_in) 
+                {
                     usb_fill_bulk_urb(urb_in, dev->udev,
                                       usb_rcvbulkpipe(dev->udev, dev->bulk_in_endpointAddr),
                                       buf_in, 512,
