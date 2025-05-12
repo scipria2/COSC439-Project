@@ -2,18 +2,47 @@
 #include <linux/kernel.h>
 #include <linux/usb.h>
 #include <linux/crypto.h>
+#include <crypto/akcipher.h>
+
+//hardcoded public key using rsa
+static unsigned char public_key[] = {
+    0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+    0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00,
+    0x30, 0x82, 0x01, 0x0a, 0x02, 0x82, 0x01, 0x01, 0x00, 0xba, 0xdf, 0x5f,
+    0x26, 0x32, 0xd6, 0x29, 0xa6, 0xc9, 0x57, 0xcf, 0x0a, 0xfb, 0x46, 0xe8,
+    0xb1, 0xdc, 0x91, 0x08, 0x69, 0x33, 0x1d, 0x2a, 0x16, 0xf7, 0x54, 0xef,
+    0x8e, 0xa2, 0x6e, 0x2b, 0x7d, 0xb0, 0x38, 0x20, 0x9e, 0x09, 0x7d, 0xba,
+    0xab, 0xa1, 0xa1, 0x4b, 0xcf, 0x67, 0xca, 0xd7, 0x4e, 0x87, 0xaf, 0x6f,
+    0xf2, 0x1e, 0xf7, 0x9e, 0xde, 0x0a, 0x47, 0x43, 0xc9, 0x90, 0x35, 0x07,
+    0x9e, 0x72, 0x91, 0x5a, 0xc6, 0xe8, 0x90, 0x43, 0x44, 0x6d, 0x98, 0x77,
+    0xed, 0xf8, 0x0a, 0x41, 0xe7, 0xf0, 0x5c, 0xa8, 0x94, 0xab, 0x61, 0xa2,
+    0xc3, 0x72, 0xc1, 0x3d, 0x27, 0x50, 0xa5, 0x5b, 0xd1, 0x1f, 0x45, 0x8b,
+    0x6f, 0x10, 0x4c, 0x8a, 0x0f, 0x4f, 0xac, 0x52, 0x05, 0x25, 0xaa, 0x76,
+    0xa6, 0x5d, 0x7b, 0x98, 0xfd, 0x08, 0x6d, 0x1c, 0x48, 0x62, 0xda, 0x3d,
+    0x61, 0xe8, 0xe8, 0xe2, 0x6b, 0x79, 0x91, 0x57, 0x40, 0x1b, 0x53, 0xf4,
+    0x0f, 0x78, 0xed, 0xa4, 0x4c, 0x40, 0xc5, 0xdb, 0xa0, 0xa3, 0xd7, 0x1f,
+    0xc9, 0xcc, 0xd8, 0x74, 0x30, 0xcd, 0xd5, 0x1a, 0x11, 0x0a, 0x16, 0xfd,
+    0x06, 0x4b, 0x13, 0xd2, 0x90, 0x7d, 0xb3, 0xcc, 0x4f, 0x3a, 0xd7, 0x92,
+    0x51, 0x6d, 0x11, 0x4f, 0x7d, 0x94, 0x08, 0x22, 0xf6, 0xaa, 0x5f, 0xf1,
+    0xa9, 0xc9, 0xd0, 0x93, 0x14, 0x51, 0x9c, 0x8c, 0x7e, 0x4a, 0xd0, 0x4c,
+    0x22, 0x07, 0x64, 0xd2, 0xae, 0xe6, 0x33, 0x29, 0x14, 0x0d, 0xe8, 0x36,
+    0x02, 0x91, 0x09, 0x17, 0x88, 0x28, 0x22, 0xba, 0x4f, 0xd6, 0x50, 0x2a,
+    0x20, 0x8a, 0xa9, 0x6d, 0x49, 0x7c, 0x82, 0x75, 0x35, 0x9e, 0x7d, 0x33,
+    0xdd, 0xfe, 0xa0, 0xd2, 0xe2, 0xb4, 0x5a, 0xaa, 0xc4, 0xc2, 0x8b, 0xc8,
+    0x52, 0x28, 0x37, 0x20, 0xdf, 0x32, 0x22, 0xee, 0xd5, 0x52, 0x82, 0x9a,
+    0xf7, 0x02, 0x03, 0x01, 0x00, 0x01
+};
+
+//size of the public key
+#define public_key_len sizeof(public_key)
 
 #define VENDOR_ID 0x1234
 #define PRODUCT_ID 0x5678
 
 
 //missing USB interface constants
-#define USB_CLASS_MASS_STORAGE 0x08
 #define USB_SC_SCSI 0x06
 #define USB_PR_BULK 0x50
-
-//hardcoded public key (NEEDS TO BE LOADED IN .DER FORMAT... WORK IN PROGRESS)
-#define PUBLIC_KEY "-----BEGIN PUBLIC KEY-----MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC+NWmIK/0w6mfEeAfduFa32lw8gN133cfFoQKQyIgQv/CuODNuYtL1cgDhmj8yC6FcWAtUrhwlpmy+FFKoUwFS1vV7hozD04PU7/K5ayFQAzg8229FmFcTu4V8biH8JF97LZ481RHN+F1W4Oi5mvl5JoYd955enQERLDHqdPugCQIDAQAB-----END PUBLIC KEY-----"
 
 //match table for supported devices
 static struct usb_device_id usb_table[] = 
@@ -21,7 +50,7 @@ static struct usb_device_id usb_table[] =
  {USB_INTERFACE_INFO(USB_CLASS_MASS_STORAGE, USB_SC_SCSI, USB_PR_BULK) },
  {}
 }; 
-MODULE_DEVICE_TABLE(usb, usb_table)
+MODULE_DEVICE_TABLE(usb, usb_table);
 
 // Driver private data structure
 struct usb_crypto {
@@ -35,15 +64,31 @@ struct usb_crypto {
 static void usb_crypto_bulk_out_callback(struct urb *urb);
 static void usb_crypto_bulk_in_callback(struct urb *urb);
 
+//function prototype
+static int encrypt(unsigned char *data, size_t data_len);
+
 // URB completion handler for bulk OUT (data sent to USB device)
 static void usb_crypto_bulk_out_callback(struct urb *urb)
 {
-    // Placeholder for encryption logic before data is sent to USB device
-    printk(KERN_INFO "USB Crypto Driver: Bulk OUT URB completed\n");
+    struct usb_crypto *dev = urb->context;
+    unsigned char *data = urb ->transfer_buffer;
+    size_t data_len = urb->actual_length;
+    int ret;
+
+    //Encrypt the data
+    ret = encrypt(data, data_len);
+    if(ret)
+    {
+        printk(KERN_ERR "USB Crypto Driver: Data Encryption failed\n");
+    } else
+    {
+     printk(KERN_INFO "USB Crypto Driver: Data Encryption successful");   
+    }
+
 
     // Free the URB
     usb_free_urb(urb);
-}
+};
 
 // URB completion handler for bulk IN (data received from USB device)
 static void usb_crypto_bulk_in_callback(struct urb *urb)
@@ -53,14 +98,6 @@ static void usb_crypto_bulk_in_callback(struct urb *urb)
 
     // Free the URB
     usb_free_urb(urb);
-}
-
-//USB driver struct
-static struct usb_driver usb_crypto_driver ={
-    .name = "USB Disk",
-    .id_table = usb_table,
-    .probe = usb_crypto_probe,
-    .disconnect = usb_crypto_disconnect,
 };
 
 //Called when the USB device is plugged in and matches this driver
@@ -146,16 +183,6 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
     return -ENODEV;
 }
 
-//encryption function (WORK IN PROGRESS)
-static int encrypt()
-{
-    //TODO: encryption function
-    struct crypto_akcipher *tfm;
-    struct akcipher_request *req;
-    struct scatterlist sl;
-
-}
-
 //called when the USB device is removed
 static void usb_crypto_disconnect (struct usb_interface *interface)
 {
@@ -172,6 +199,83 @@ static void usb_crypto_disconnect (struct usb_interface *interface)
 
     printk(KERN_INFO "USB Crypto Driver: USB Device removed\n");
 }
+
+//USB driver struct
+static struct usb_driver usb_crypto_driver ={
+    .name = "USB Crypto Driver",
+    .id_table = usb_table,
+    .probe = usb_crypto_probe,
+    .disconnect = usb_crypto_disconnect,
+};
+
+//encryption function (WORK IN PROGRESS)
+static int encrypt(unsigned char *data, size_t data_len)
+{
+    //TODO: encryption function
+    struct crypto_akcipher *tfm;
+    struct akcipher_request *req;
+    struct scatterlist src, dst;
+    unsigned char *encrypted_data;
+    int ret;
+
+    
+
+    encrypted_data = kmalloc(data_len + 256, GFP_KERNEL);
+    if (!encrypted_data)
+    {
+        printk(KERN_ERR "USB Crypto Driver: Memory allocation for encrypted data failed\n");
+        return -ENOMEM;
+    }
+
+    tfm = crypto_alloc_akcipher("rsa", 0, 0);
+
+    if(IS_ERR(tfm))
+    {
+        printk(KERN_ERR "USB Crypto Driver: Failed to allocate crypto tfm\n");
+        kfree(encrypted_data);
+        return PTR_ERR(tfm);
+    }
+
+    //set public key
+    ret = crypto_akcipher_set_public_key(tfm, public_key, public_key_len);
+
+    if (ret)
+    {
+        printk(KERN_ERR "USB Crypto Driver: Failed to set public key\n");
+        crypto_free_akcipher(tfm);
+        kfree(encrypted_data);
+        return ret;
+    }
+    
+    //scatterlist for input and output buffers
+    sg_init_one(&src, data, data_len);
+    sg_init_one(&dst, encrypted_data, data_len + 256);
+
+    //request for encryption
+    req = akcipher_request_alloc(tfm, GFP_KERNEL);
+    if(!req)
+    {
+        printk(KERN_ERR "USB Crypto Driver: Failed to allocate akcipher request\n");
+        crypto_free_akcipher(tfm);
+        kfree(encrypted_data);
+        return -ENOMEM;
+    }
+
+    akcipher_request_set_crypt(req, &src, &dst, data_len, data_len + 256);
+    ret = crypto_akcipher_encrypt(req);
+    if(ret)
+    {
+        printk(KERN_ERR "USB Crypto Driver: Data Encryption failed\n");
+    } else {
+        printk(KERN_INFO "USB Crypto Driver: Data Encryption successful");
+    }
+
+    akcipher_request_free(req);
+    crypto_free_akcipher(tfm);
+    kfree(encrypted_data);
+
+    return ret;
+};
 
 //Module init
 static int __init usb_crypto_init(void)
