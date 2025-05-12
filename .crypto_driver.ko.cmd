@@ -1,0 +1,1 @@
+savedcmd_/home/steph/crypto_driver/crypto_driver.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/steph/crypto_driver/crypto_driver.ko /home/steph/crypto_driver/crypto_driver.o /home/steph/crypto_driver/crypto_driver.mod.o

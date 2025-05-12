@@ -1,20 +1,28 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/usb.h>
+#include <linux/usb/ch9.h>
+#include <linux/module.h>
+#include <linux/scatterlist.h>
+#include <linux/slab.h>
 #include <linux/crypto.h>
 #include <crypto/akcipher.h>
 #include <crypto/public_key.h>
-#include <linux/scatterlist.h>
-#include <linux/slab.h>
+
 
 //USB device identifiers
-#define VENDOR_ID 0x1234
-#define PRODUCT_ID 0x5678
+#define VENDOR_ID 0x13fe
+#define PRODUCT_ID 0x4300
 
 //missing USB interface constants
-#define USB_CLASS_MASS_STORAGE 0x80
+#define USB_CLASS_MASS_STORAGE 0x08
 #define USB_SC_SCSI 0x06
 #define USB_PR_BULK 0x50
+
+//Data buffer sizes
+#define max_buffer_size 4096
+#define rsa_block_size 256
+#define max_plain_size (245) //pkcs#1 needs 11 bytes 
 
 //hardcoded public key using rsa (DER format)
 static unsigned char public_key[] = {
@@ -44,15 +52,9 @@ static unsigned char public_key[] = {
   0x52, 0x28, 0x37, 0x20, 0xdf, 0x32, 0x22, 0xee, 0xd5, 0x52, 0x82, 0x9a,
   0xf7, 0x02, 0x03, 0x01, 0x00, 0x01
 };
-unsigned int public_key_len = 294;
 
 //size of the public key
 #define public_key_len sizeof(public_key)
-
-//Data buffer sizes
-#define max_buffer_size 4096
-#define rsa_block_size 256
-#define max_plain_size (245) //pkcs#1 needs 11 bytes 
 
 // Driver private data structure
 struct usb_crypto {
@@ -102,26 +104,40 @@ static int process_data(struct usb_crypto *dev, unsigned char *data, size_t data
         {
             //determine size of next chunk
             if(remaining > max_plain_size)
-            {
-                chunk_size = max_plain_size; //process maximum chunk size 
+            { //process maximum chunk size 
+              chunk_size = max_plain_size; 
             }
             else 
-            { 
-                chunk_size = remaining; //process remaining data
+            { //process remaining data
+                chunk_size = remaining; 
             } 
 
             out_len = rsa_block_size;
             ret = encrypt(data, chunk_size, out_buffer, &out_len);
             if(ret)
-            {
-                break; // exit if encryption failed
+            { // exit if encryption failed
+                printk(KERN_ERR "USB Crypto Driver: Encryption failed\n");
+                break; 
             }
+
+            //send the encrypted data to the USB device
+            ret = usb_bulk_msg(dev->udev,usb_sndbulkpipe(dev->udev, dev->bulk_out_endpointAddr),
+                                out_buffer,
+                                out_len,
+                                NULL,
+                                5000);
+
+            if(ret)
+            {
+                printk(KERN_ERR "USB Crypto Driver: Failed to send encrypted data to USB device\n");
+                break;
+            }
+
 
             data += chunk_size;
             remaining -= chunk_size;
             processed += out_len; //track total output bytes
         }
-
     }//end dev->is_encrypting
 
     kfree(out_buffer);
@@ -134,7 +150,7 @@ static int process_data(struct usb_crypto *dev, unsigned char *data, size_t data
 };//end process_data
 
 //encryption with public key
-static int encrypt(unsigned char *data, size_t data_len, unsigned char *out, size_t *out_len)
+int encrypt(unsigned char *data, size_t data_len, unsigned char *out, size_t *out_len)
 {
     //TODO: encryption function
     struct crypto_akcipher *tfm;
@@ -196,7 +212,7 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
 {
     struct usb_device *udev = interface_to_usbdev(interface);
 
-    if (udev->descriptor.idVendor == VENDOR_ID && udev->descriptor.idProduct == PRODUCT_ID) {
+    
         printk(KERN_INFO "USB Crypto Driver: Specific USB Device detected (Vendor: %04x, Product: %04x)\n",
                udev->descriptor.idVendor, udev->descriptor.idProduct);
 
@@ -208,8 +224,6 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
             return retval;
         }
         */
-        
-     
         struct usb_host_interface *iface_desc = interface->cur_altsetting;
         int i;
         struct usb_crypto *dev;
@@ -270,11 +284,7 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
             }
         }
 
-        return 0;
-    }
-
-    printk(KERN_INFO "USB Crypto Driver: Unsupported USB Device detected\n");
-    return -ENODEV;
+    return 0;
 }//end probe
 
 //called when the USB device is removed
@@ -299,6 +309,8 @@ static void usb_crypto_bulk_out_callback(struct urb *urb)
     size_t data_len = urb->actual_length;
     int ret;
 
+    printk(KERN_INFO "USB Crypto Driver: Bulk OUT URB completed\n");
+
     // allow encryption to happen
     dev->is_encrypting = true;
 
@@ -310,7 +322,6 @@ static void usb_crypto_bulk_out_callback(struct urb *urb)
     {
      printk(KERN_INFO "USB Crypto Driver: Data Encryption successful");   
     }
-
 
     // Free the URB
     usb_free_urb(urb);
@@ -334,7 +345,7 @@ static void usb_crypto_bulk_in_callback(struct urb *urb)
 //match table for supported devices
 static struct usb_device_id usb_table[] = 
 {
- {USB_INTERFACE_INFO(USB_CLASS_MASS_STORAGE, USB_SC_SCSI, USB_PR_BULK) },
+ {USB_INTERFACE_INFO(USB_CLASS_MASS_STORAGE, USB_SC_SCSI, USB_PR_BULK)},
  {}
 }; 
 MODULE_DEVICE_TABLE(usb, usb_table); //end usb_table
@@ -364,6 +375,6 @@ static void __exit usb_crypto_exit(void)
 module_init(usb_crypto_init);
 module_exit(usb_crypto_exit);
 
-MODULE_LICENSE("GPL")
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Stephanie Ciprian and Deep Shah");
 MODULE_DESCRIPTION("A USB driver that encrypts and decrypts data in C");
