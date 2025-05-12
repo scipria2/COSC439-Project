@@ -212,18 +212,10 @@ static int usb_crypto_probe(struct usb_interface *interface, const struct usb_de
 {
     struct usb_device *udev = interface_to_usbdev(interface);
 
-    
-        printk(KERN_INFO "USB Crypto Driver: Specific USB Device detected (Vendor: %04x, Product: %04x)\n",
-               udev->descriptor.idVendor, udev->descriptor.idProduct);
+    printk(KERN_INFO "USB Crypto Driver: USB Device detected (Vendor: %04x, Product: %04x)\n",
+            udev->descriptor.idVendor, udev->descriptor.idProduct);
 
-        /*
-        // Claim the interface
-        int retval = usb_driver_claim_interface(&usb_crypto_driver, interface, NULL);
-        if (retval) {
-            printk(KERN_ERR "USB Crypto Driver: Failed to claim interface\n");
-            return retval;
-        }
-        */
+        
         struct usb_host_interface *iface_desc = interface->cur_altsetting;
         int i;
         struct usb_crypto *dev;
