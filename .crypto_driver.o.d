@@ -286,4 +286,18 @@ crypto_driver.o: /home/steph/crypto_driver/crypto_driver.c \
  include/linux/device/bus.h include/linux/device/class.h \
  include/linux/device/driver.h arch/x86/include/asm/device.h \
  include/linux/pm_wakeup.h include/linux/pm_runtime.h \
- include/linux/crypto.h
+ include/linux/crypto.h include/crypto/akcipher.h \
+ include/crypto/public_key.h include/linux/keyctl.h \
+ include/uapi/linux/keyctl.h include/linux/oid_registry.h \
+ include/linux/scatterlist.h include/linux/mm.h include/linux/page_ext.h \
+ include/linux/stacktrace.h include/linux/stackdepot.h \
+ include/linux/page_ref.h include/linux/sizes.h include/linux/pgtable.h \
+ include/linux/memremap.h include/linux/huge_mm.h \
+ include/linux/sched/coredump.h include/linux/vmstat.h \
+ include/linux/vm_event_item.h arch/x86/include/asm/io.h \
+ arch/x86/include/generated/asm/early_ioremap.h \
+ include/asm-generic/early_ioremap.h arch/x86/include/asm/shared/io.h \
+ include/asm-generic/io.h include/asm-generic/iomap.h \
+ include/asm-generic/pci_iomap.h include/linux/logic_pio.h \
+ include/linux/fwnode.h include/linux/vmalloc.h \
+ arch/x86/include/asm/vmalloc.h arch/x86/include/asm/pgtable_areas.h
