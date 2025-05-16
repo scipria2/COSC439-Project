@@ -8,6 +8,8 @@
 #include <linux/crypto.h>
 #include <crypto/akcipher.h>
 #include <crypto/public_key.h>
+#include <linux/fs.h>
+#include <linux/uaccess.h>
 
 
 //USB device identifiers
@@ -78,7 +80,10 @@ static void usb_crypto_bulk_in_callback(struct urb *urb);
 //function prototypes
 static int encrypt(unsigned char *data, size_t data_len, unsigned char *out, size_t *out_len);
 static int process_data(struct usb_crypto *dev, unsigned char *data, size_t data_len);
+static int write_encrypted_data(const char *path, const char *data, size_t len);
 
+
+//function to process the data
 static int process_data(struct usb_crypto *dev, unsigned char *data, size_t data_len) 
 {
     unsigned char *out_buffer;
@@ -207,6 +212,32 @@ int encrypt(unsigned char *data, size_t data_len, unsigned char *out, size_t *ou
     return ret;
 }; //end encrypt()
 
+static int write_encrypted_data(const char *path, const char *data, size_t len)
+{   
+    struct file *filp;
+    mm_segment_t old_fs;
+    loff_t pos = 0;
+
+    old_fs = get_fs();
+    set_fs(KERNEL_DS); //allow kernel access to user space files
+
+    filp = filp_open(path, O_WRONLY|O_CREATE |O_TRUNC, 0644);
+    if(IS_ERR(filp))
+    {
+        printk(KERN_ERR "USB Crypto Driver: Failed to open file: %s\n", path);
+        set_fs(old_fs);
+        return PTR_ERR(filp);
+    }
+
+    vfs_write(filp, data, len, &pos);
+    filp_close(filp, NULL);
+    set_fs(old_fs);
+
+    printk(KERN_INFO "USB Crypto Driver: Encrypted data written to %s\n", path);
+    return 0;
+};
+
+
 //Called when the USB device is plugged in and matches this driver
 static int usb_crypto_probe(struct usb_interface *interface, const struct usb_device_id *id)
 {
@@ -317,7 +348,9 @@ static void usb_crypto_bulk_out_callback(struct urb *urb)
         printk(KERN_ERR "USB Crypto Driver: Data Encryption failed\n");
     } else
     {
-     printk(KERN_INFO "USB Crypto Driver: Data Encryption successful");   
+     printk(KERN_INFO "USB Crypto Driver: Data Encryption successful"); 
+     
+     write_encrypted_data(data, ret)
     }
 
     // Free the URB
