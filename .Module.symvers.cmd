@@ -1,0 +1,1 @@
+savedcmd_/home/steph/Desktop/crypto_driver/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /home/steph/Desktop/crypto_driver/Module.symvers -T /home/steph/Desktop/crypto_driver/modules.order -i Module.symvers -e 
